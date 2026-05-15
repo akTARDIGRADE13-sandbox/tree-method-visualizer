@@ -1,4 +1,5 @@
 import type { Cell, Rect } from "./tree";
+import { clamp } from "./utils";
 
 export type Vec2 = {
   x: number;
@@ -43,7 +44,12 @@ export function generateParticles(n: number, seed: number): Particle[] {
   return particles;
 }
 
-export function drawScene(canvas: HTMLCanvasElement, particles: Particle[], cells: Cell[]): void {
+export function drawScene(
+  canvas: HTMLCanvasElement,
+  particles: Particle[],
+  cells: Cell[],
+  targetParticleIndex: number,
+): void {
   const context = canvas.getContext("2d");
 
   if (context === null) {
@@ -60,7 +66,8 @@ export function drawScene(canvas: HTMLCanvasElement, particles: Particle[], cell
   }
 
   for (const particle of particles) {
-    drawParticle(context, particle, width, height);
+    const isTarget = particle.id === targetParticleIndex;
+    drawParticle(context, particle, width, height, isTarget);
   }
 }
 
@@ -95,13 +102,20 @@ function drawParticle(
   particle: Particle,
   width: number,
   height: number,
+  isTarget: boolean,
 ): void {
   const { x, y } = toCanvasPosition(particle.position, width, height);
 
   context.beginPath();
-  context.arc(x, y, 1.5, 0, Math.PI * 2);
-  context.fillStyle = "#111111";
+  context.arc(x, y, isTarget ? 4 : 1.5, 0, Math.PI * 2);
+  context.fillStyle = isTarget ? "#dc2626" : "#111111";
   context.fill();
+
+  if (isTarget) {
+    context.strokeStyle = "#ffffff";
+    context.lineWidth = 2;
+    context.stroke();
+  }
 }
 
 function toCanvasRect(
@@ -164,10 +178,6 @@ function getCellStrokeStyle(depth: number): string {
   }
 
   return "#d1d5db";
-}
-
-function clamp(value: number, minValue: number, maxValue: number): number {
-  return Math.max(minValue, Math.min(maxValue, value));
 }
 
 function createRandom(seed: number): () => number {
