@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2D Tree Method Visualizer</title>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>2D Tree Method Visualizer</h1>
+      <p>ツリー法（2次元バージョン）の可視化をします。</p>
+    </header>
+
+    <main class="app-layout">
+      <section class="canvas-panel">
+        <canvas id="main-canvas" width="1200" height="1200"></canvas>
+      </section>
+
+      <aside class="control-panel">
+        <h2>Controls</h2>
+
+        <label>
+          <button id="rerender-button">Rerender</button>
+        </label>
+        <label>
+          Number of particles
+          <select id="particle-count-select">
+            <option value="25">25</option>
+            <option value="100">100</option>
+            <option value="400">400</option>
+            <option value="1600">1600</option>
+          </select>
+        </label>
+        <label>
+          Seed
+          <input id="particle-seed-input" type="number" id="seed" name="seed" min="0" value="0" />
+        </label>
+        <label>
+          Opening angle
+          <input
+            id="opening-angle-input"
+            type="number"
+            step="0.001"
+            id="seed"
+            name="seed"
+            min="0.001"
+            max="0.999"
+            value="0.001"
+          />
+        </label>
+        <div class="stats">
+          <h3>Stats</h3>
+          <p id="stats-text">N = 25, seed = 0</p>
+        </div>
+      </aside>
+    </main>
+
+    <section class="discription-panel">
+      <h2>Build Tree Mode</h2>
+      <p>粒子を単位正方形内に配置。今後この上にセル境界を描画していく。</p>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
