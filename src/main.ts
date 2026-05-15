@@ -1,6 +1,6 @@
 import "./style.css";
-import { drawScene, generateParticles } from "./renderer";
-import { buildTree } from "./tree";
+import { createBuildRenderState, drawScene, generateParticles } from "./renderer";
+import { buildTreeWithSteps } from "./tree";
 import { traverseTree } from "./traversal";
 import { clamp } from "./utils";
 
@@ -28,15 +28,25 @@ const statsText = getElementOrThrow<HTMLElement>("#stats-text");
 const thetaControl = getElementOrThrow<HTMLDivElement>("#theta-control");
 const thetaSlider = getElementOrThrow<HTMLInputElement>("#theta-slider");
 const thetaValue = getElementOrThrow<HTMLSpanElement>("#theta-value");
+const stepBackwardButton = getElementOrThrow<HTMLButtonElement>("#step-backward-button");
+const stepForwardButton = getElementOrThrow<HTMLButtonElement>("#step-forward-button");
+const resetButton = getElementOrThrow<HTMLButtonElement>("#reset-button");
+
+let currentBuildStepIndex = -1;
 
 function render(): void {
   const mode = getVisualizationMode();
 
   const seed = Number(particleSeed.value);
   const particleCount = Number(particleCountSelect.value);
+
   const particles = generateParticles(particleCount, seed);
-  const tree = buildTree(particles);
+  const { tree, buildSteps } = buildTreeWithSteps(particles);
+  currentBuildStepIndex = clamp(currentBuildStepIndex, -1, buildSteps.length - 1);
+
   const targetParticleIndex = getValidTargetParticleIndex(particleCount);
+  const buildRenderState =
+    mode === "build" ? createBuildRenderState(buildSteps, currentBuildStepIndex) : null;
 
   thetaControl.hidden = mode !== "traverse";
   const theta = Number(thetaSlider.value);
@@ -45,7 +55,14 @@ function render(): void {
   const traversalResult =
     mode === "traverse" ? traverseTree(tree, targetParticleIndex, theta) : null;
 
-  drawScene(canvas, tree.particles, tree.cells, targetParticleIndex, traversalResult);
+  drawScene(
+    canvas,
+    tree.particles,
+    tree.cells,
+    targetParticleIndex,
+    traversalResult,
+    buildRenderState,
+  );
 
   updateDescription(mode);
   updateStats(mode, {
@@ -56,6 +73,8 @@ function render(): void {
     cellCount: tree.cells.length,
     leafCellCount: tree.cells.filter((cell) => cell.isLeaf).length,
     maxDepth: Math.max(...tree.cells.map((cell) => cell.depth)),
+    currentBuildStepIndex,
+    buildStepCount: buildSteps.length,
     visitedCellCount: traversalResult?.visitedCellCount ?? null,
     acceptedCellCount: traversalResult?.acceptedCellCount ?? null,
     openedCellCount: traversalResult?.openedCellCount ?? null,
@@ -111,6 +130,8 @@ function updateStats(
     cellCount: number;
     leafCellCount: number;
     maxDepth: number;
+    currentBuildStepIndex: number;
+    buildStepCount: number;
     visitedCellCount: number | null;
     acceptedCellCount: number | null;
     openedCellCount: number | null;
@@ -128,7 +149,8 @@ function updateStats(
     `max depth = ${stats.maxDepth}`;
 
   if (mode === "build") {
-    statsText.textContent = baseStats;
+    statsText.textContent =
+      baseStats + `, step = ${stats.currentBuildStepIndex + 1}` + ` / ${stats.buildStepCount}`;
     return;
   }
 
@@ -141,7 +163,7 @@ function updateStats(
 }
 
 rerenderButton.addEventListener("click", () => {
-  console.log("Rerender!");
+  currentBuildStepIndex = -1;
   render();
 });
 
@@ -157,6 +179,21 @@ modeSelect.addEventListener("change", () => {
 
 thetaSlider.addEventListener("input", () => {
   console.log("Update theta slider!");
+  render();
+});
+
+stepBackwardButton.addEventListener("click", () => {
+  currentBuildStepIndex -= 1;
+  render();
+});
+
+stepForwardButton.addEventListener("click", () => {
+  currentBuildStepIndex += 1;
+  render();
+});
+
+resetButton.addEventListener("click", () => {
+  currentBuildStepIndex = -1;
   render();
 });
 

@@ -1,4 +1,4 @@
-import type { Cell, Rect } from "./tree";
+import type { BuildStep, Cell, Rect } from "./tree";
 import { clamp } from "./utils";
 
 export type Vec2 = {
@@ -9,6 +9,12 @@ export type Vec2 = {
 export type Particle = {
   id: number;
   position: Vec2;
+};
+
+export type BuildRenderState = {
+  visibleCellIds: Set<number>;
+  currentCellId: number | null;
+  createdChildCellIds: Set<number>;
 };
 
 export function generateParticles(n: number, seed: number): Particle[] {
@@ -44,12 +50,55 @@ export function generateParticles(n: number, seed: number): Particle[] {
   return particles;
 }
 
+export function createBuildRenderState(
+  buildSteps: BuildStep[],
+  currentStepIndex: number,
+): BuildRenderState {
+  const visibleCellIds = new Set<number>();
+  const createdChildCellIds = new Set<number>();
+
+  visibleCellIds.add(0);
+
+  if (buildSteps.length === 0 || currentStepIndex < 0) {
+    return {
+      visibleCellIds,
+      currentCellId: null,
+      createdChildCellIds,
+    };
+  }
+
+  const clampedStepIndex = Math.min(currentStepIndex, buildSteps.length - 1);
+
+  for (let i = 0; i <= clampedStepIndex; i++) {
+    const step = buildSteps[i];
+
+    visibleCellIds.add(step.cellId);
+
+    for (const childCellId of step.createdChildCellIds) {
+      visibleCellIds.add(childCellId);
+    }
+  }
+
+  const currentStep = buildSteps[clampedStepIndex];
+
+  for (const childCellId of currentStep.createdChildCellIds) {
+    createdChildCellIds.add(childCellId);
+  }
+
+  return {
+    visibleCellIds,
+    currentCellId: currentStep.cellId,
+    createdChildCellIds,
+  };
+}
+
 export function drawScene(
   canvas: HTMLCanvasElement,
   particles: Particle[],
   cells: Cell[],
   targetParticleIndex: number,
   traversalResult: TraversalResult | null,
+  buildRenderState: BuildRenderState | null,
 ): void {
   const context = canvas.getContext("2d");
 
@@ -63,7 +112,10 @@ export function drawScene(
   clearCanvas(context, width, height);
 
   for (const cell of cells) {
-    drawCell(context, cell, width, height, traversalResult);
+    if (buildRenderState !== null && !buildRenderState.visibleCellIds.has(cell.id)) {
+      continue;
+    }
+    drawCell(context, cell, width, height, traversalResult, buildRenderState);
   }
 
   for (const particle of particles) {
@@ -85,23 +137,40 @@ function drawCell(
   width: number,
   height: number,
   traversalResult: TraversalResult | null,
+  buildRenderState: BuildRenderState | null,
 ): void {
   const rect = toCanvasRect(cell.bounds, width, height);
 
-  const fillStyle = getCellFillStyle(cell, traversalResult);
+  const fillStyle = getCellFillStyle(cell, traversalResult, buildRenderState);
 
   if (fillStyle !== null) {
     context.fillStyle = fillStyle;
     context.fillRect(rect.x, rect.y, rect.width, rect.height);
   }
 
-  context.strokeStyle = getCellStrokeStyle(cell.depth);
-  context.lineWidth = cell.depth === 0 ? 2 : 1;
+  context.strokeStyle = getCellStrokeStyle(cell, buildRenderState);
+  context.lineWidth = getCellLineWidth(cell, buildRenderState);
 
   context.strokeRect(rect.x, rect.y, rect.width, rect.height);
 }
 
-function getCellFillStyle(cell: Cell, traversalResult: TraversalResult | null): string | null {
+function getCellFillStyle(
+  cell: Cell,
+  traversalResult: TraversalResult | null,
+  buildRenderState: BuildRenderState | null,
+): string | null {
+  if (buildRenderState !== null) {
+    if (buildRenderState.createdChildCellIds.has(cell.id)) {
+      return "rgba(59, 130, 246, 0.16)";
+    }
+
+    if (cell.isLeaf) {
+      return "rgba(59, 130, 246, 0.04)";
+    }
+
+    return null;
+  }
+
   if (traversalResult === null) {
     if (cell.isLeaf) {
       return "rgba(59, 130, 246, 0.04)";
@@ -200,20 +269,32 @@ function toCanvasPosition(position: Vec2, width: number, height: number): Vec2 {
   };
 }
 
-function getCellStrokeStyle(depth: number): string {
-  if (depth === 0) {
+function getCellStrokeStyle(cell: Cell, buildRenderState: BuildRenderState | null): string {
+  if (buildRenderState?.currentCellId === cell.id) {
+    return "#2563eb";
+  }
+
+  if (cell.depth === 0) {
     return "#111827";
   }
 
-  if (depth <= 2) {
+  if (cell.depth <= 2) {
     return "#6b7280";
   }
 
-  if (depth <= 4) {
+  if (cell.depth <= 4) {
     return "#9ca3af";
   }
 
   return "#d1d5db";
+}
+
+function getCellLineWidth(cell: Cell, buildRenderState: BuildRenderState | null): number {
+  if (buildRenderState?.currentCellId === cell.id) {
+    return 3;
+  }
+
+  return cell.depth === 0 ? 2 : 1;
 }
 
 function createRandom(seed: number): () => number {

@@ -26,6 +26,12 @@ export type Tree = {
   maxDepth: number;
 };
 
+export type BuildStep = {
+  stepId: number;
+  cellId: number;
+  createdChildCellIds: number[];
+};
+
 const ROOT_BOUNDS: Rect = {
   xMin: 0.0,
   yMin: 0.0,
@@ -47,6 +53,33 @@ export function buildTree(particles: Particle[], maxDepth: number = 16): Tree {
     cells,
     rootId,
     maxDepth,
+  };
+}
+
+export function buildTreeWithSteps(
+  particles: Particle[],
+  maxDepth: number = 16,
+): {
+  tree: Tree;
+  buildSteps: BuildStep[];
+} {
+  const cells: Cell[] = [];
+  const buildSteps: BuildStep[] = [];
+
+  const rootParticleIndices = particles.map((particle) => particle.id);
+
+  const rootId = createCell(cells, particles, null, 0, ROOT_BOUNDS, rootParticleIndices);
+
+  subdivideCellWithSteps(cells, particles, rootId, maxDepth, buildSteps);
+
+  return {
+    tree: {
+      particles,
+      cells,
+      rootId,
+      maxDepth,
+    },
+    buildSteps,
   };
 }
 
@@ -100,6 +133,69 @@ function subdivideCell(
 
   for (const childId of cell.children) {
     subdivideCell(cells, particles, childId, maxDepth);
+  }
+}
+
+function subdivideCellWithSteps(
+  cells: Cell[],
+  particles: Particle[],
+  cellId: number,
+  maxDepth: number,
+  buildSteps: BuildStep[],
+): void {
+  const cell = cells[cellId];
+
+  if (cell.particleIndices.length <= 1) {
+    cell.isLeaf = true;
+    return;
+  }
+
+  if (cell.depth >= maxDepth) {
+    cell.isLeaf = true;
+    return;
+  }
+
+  const childBoundsList = splitRectIntoQuadrants(cell.bounds);
+  const childParticleIndicesList: number[][] = [[], [], [], []];
+
+  for (const particleIndex of cell.particleIndices) {
+    const particle = particles[particleIndex];
+    const quadrant = getQuadrant(cell.bounds, particle.position);
+    childParticleIndicesList[quadrant].push(particleIndex);
+  }
+
+  const createdChildCellIds: number[] = [];
+
+  for (let quadrant = 0; quadrant < 4; quadrant++) {
+    const childParticleIndices = childParticleIndicesList[quadrant];
+
+    if (childParticleIndices.length === 0) {
+      continue;
+    }
+
+    const childId = createCell(
+      cells,
+      particles,
+      cell.id,
+      cell.depth + 1,
+      childBoundsList[quadrant],
+      childParticleIndices,
+    );
+
+    cell.children.push(childId);
+    createdChildCellIds.push(childId);
+  }
+
+  cell.isLeaf = false;
+
+  buildSteps.push({
+    stepId: buildSteps.length,
+    cellId: cell.id,
+    createdChildCellIds,
+  });
+
+  for (const childId of cell.children) {
+    subdivideCellWithSteps(cells, particles, childId, maxDepth, buildSteps);
   }
 }
 
