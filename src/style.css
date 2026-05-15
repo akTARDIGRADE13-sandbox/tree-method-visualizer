@@ -106,3 +106,10 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+#theta-value {
+  display: inline-block;
+  margin-top: 4px;
+  color: #52606d;
+  font-size: 14px;
+}

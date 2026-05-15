@@ -49,6 +49,7 @@ export function drawScene(
   particles: Particle[],
   cells: Cell[],
   targetParticleIndex: number,
+  traversalResult: TraversalResult | null,
 ): void {
   const context = canvas.getContext("2d");
 
@@ -62,7 +63,7 @@ export function drawScene(
   clearCanvas(context, width, height);
 
   for (const cell of cells) {
-    drawCell(context, cell, width, height);
+    drawCell(context, cell, width, height, traversalResult);
   }
 
   for (const particle of particles) {
@@ -83,18 +84,53 @@ function drawCell(
   cell: Cell,
   width: number,
   height: number,
+  traversalResult: TraversalResult | null,
 ): void {
   const rect = toCanvasRect(cell.bounds, width, height);
+
+  const fillStyle = getCellFillStyle(cell, traversalResult);
+
+  if (fillStyle !== null) {
+    context.fillStyle = fillStyle;
+    context.fillRect(rect.x, rect.y, rect.width, rect.height);
+  }
 
   context.strokeStyle = getCellStrokeStyle(cell.depth);
   context.lineWidth = cell.depth === 0 ? 2 : 1;
 
   context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+}
+
+function getCellFillStyle(cell: Cell, traversalResult: TraversalResult | null): string | null {
+  if (traversalResult === null) {
+    if (cell.isLeaf) {
+      return "rgba(59, 130, 246, 0.04)";
+    }
+
+    return null;
+  }
+
+  if (traversalResult.acceptedCellIds.has(cell.id)) {
+    return "rgba(34, 197, 94, 0.20)";
+  }
+
+  if (traversalResult.openedCellIds.has(cell.id)) {
+    return "rgba(249, 115, 22, 0.14)";
+  }
+
+  if (traversalResult.directLeafCellIds.has(cell.id)) {
+    return "rgba(168, 85, 247, 0.20)";
+  }
+
+  if (traversalResult.ignoredCellIds.has(cell.id)) {
+    return "rgba(156, 163, 175, 0.08)";
+  }
 
   if (cell.isLeaf) {
-    context.fillStyle = "rgba(59, 130, 246, 0.04)";
-    context.fillRect(rect.x, rect.y, rect.width, rect.height);
+    return "rgba(59, 130, 246, 0.04)";
   }
+
+  return null;
 }
 
 function drawParticle(
