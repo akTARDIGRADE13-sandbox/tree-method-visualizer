@@ -1,3 +1,5 @@
+import type { Cell, Rect } from "./tree";
+
 export type Vec2 = {
   x: number;
   y: number;
@@ -20,10 +22,11 @@ export function generateParticles(n: number, seed: number): Particle[] {
 
   const random = createRandom(seed);
 
-  for (let j = 0; j < m; ++j) {
-    for (let i = 0; i < m; ++i) {
+  for (let j = 0; j < m; j++) {
+    for (let i = 0; i < m; i++) {
       const baseX = (i + 0.5) / m;
       const baseY = (j + 0.5) / m;
+
       const dx = (random() - 0.5) * h;
       const dy = (random() - 0.5) * h;
 
@@ -40,11 +43,7 @@ export function generateParticles(n: number, seed: number): Particle[] {
   return particles;
 }
 
-export function drawParticles(
-  canvas: HTMLCanvasElement,
-  particles: Particle[],
-  openingAngle: number,
-): void {
+export function drawScene(canvas: HTMLCanvasElement, particles: Particle[], cells: Cell[]): void {
   const context = canvas.getContext("2d");
 
   if (context === null) {
@@ -55,7 +54,10 @@ export function drawParticles(
   const height = canvas.height;
 
   clearCanvas(context, width, height);
-  drawUnitSquare(context, width, height);
+
+  for (const cell of cells) {
+    drawCell(context, cell, width, height);
+  }
 
   for (const particle of particles) {
     drawParticle(context, particle, width, height);
@@ -69,13 +71,23 @@ function clearCanvas(context: CanvasRenderingContext2D, width: number, height: n
   context.fillRect(0, 0, width, height);
 }
 
-function drawUnitSquare(context: CanvasRenderingContext2D, width: number, height: number): void {
-  const margin = 40;
-  const size = Math.min(width, height) - margin * 2;
+function drawCell(
+  context: CanvasRenderingContext2D,
+  cell: Cell,
+  width: number,
+  height: number,
+): void {
+  const rect = toCanvasRect(cell.bounds, width, height);
 
-  context.strokeStyle = "#333333";
-  context.lineWidth = 2;
-  context.strokeRect(margin, margin, size, size);
+  context.strokeStyle = getCellStrokeStyle(cell.depth);
+  context.lineWidth = cell.depth === 0 ? 2 : 1;
+
+  context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+
+  if (cell.isLeaf) {
+    context.fillStyle = "rgba(59, 130, 246, 0.04)";
+    context.fillRect(rect.x, rect.y, rect.width, rect.height);
+  }
 }
 
 function drawParticle(
@@ -87,9 +99,45 @@ function drawParticle(
   const { x, y } = toCanvasPosition(particle.position, width, height);
 
   context.beginPath();
-  context.arc(x, y, 3, 0, Math.PI * 2);
+  context.arc(x, y, 1.5, 0, Math.PI * 2);
   context.fillStyle = "#111111";
   context.fill();
+}
+
+function toCanvasRect(
+  bounds: Rect,
+  width: number,
+  height: number,
+): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  const topLeft = toCanvasPosition(
+    {
+      x: bounds.xMin,
+      y: bounds.yMax,
+    },
+    width,
+    height,
+  );
+
+  const bottomRight = toCanvasPosition(
+    {
+      x: bounds.xMax,
+      y: bounds.yMin,
+    },
+    width,
+    height,
+  );
+
+  return {
+    x: topLeft.x,
+    y: topLeft.y,
+    width: bottomRight.x - topLeft.x,
+    height: bottomRight.y - topLeft.y,
+  };
 }
 
 function toCanvasPosition(position: Vec2, width: number, height: number): Vec2 {
@@ -100,6 +148,22 @@ function toCanvasPosition(position: Vec2, width: number, height: number): Vec2 {
     x: margin + position.x * size,
     y: margin + (1.0 - position.y) * size,
   };
+}
+
+function getCellStrokeStyle(depth: number): string {
+  if (depth === 0) {
+    return "#111827";
+  }
+
+  if (depth <= 2) {
+    return "#6b7280";
+  }
+
+  if (depth <= 4) {
+    return "#9ca3af";
+  }
+
+  return "#d1d5db";
 }
 
 function clamp(value: number, minValue: number, maxValue: number): number {

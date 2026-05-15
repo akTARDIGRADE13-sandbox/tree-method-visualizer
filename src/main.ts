@@ -1,5 +1,6 @@
 import "./style.css";
-import { drawParticles, generateParticles } from "./renderer";
+import { drawScene, generateParticles } from "./renderer";
+import { buildTree } from "./tree";
 
 function getElementOrThrow<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -23,14 +24,23 @@ function render(): void {
   const openingAngle = Number(openingAngleInput.value);
   const particleCount = Number(particleCountSelect.value);
   const particles = generateParticles(particleCount, seed);
+  const tree = buildTree(particles);
 
-  drawParticles(canvas, particles, openingAngle);
+  drawScene(canvas, tree.particles, tree.cells);
 
-  statsText.textContent = `N = ${particleCount}, seed = ${seed}`;
+  const leafCellCount = tree.cells.filter((cell) => cell.isLeaf).length;
+  const maxDepth = Math.max(...tree.cells.map((cell) => cell.depth));
+
+  statsText.textContent =
+    `N = ${particleCount}, ` +
+    `seed = ${seed}, ` +
+    `cells = ${tree.cells.length}, ` +
+    `leaves = ${leafCellCount}, ` +
+    `max depth = ${maxDepth}`;
 }
 
 rerenderButton.addEventListener("click", () => {
-  console.log("Hello!");
+  console.log("Rerender!");
   render();
 });
 
