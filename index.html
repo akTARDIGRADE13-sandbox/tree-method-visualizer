@@ -19,31 +19,42 @@
       <aside class="control-panel">
         <h2>Controls</h2>
 
+        <div id="condition">
+          <label>
+            Number of particles
+            <select id="particle-count-select">
+              <option value="25">25</option>
+              <option value="100">100</option>
+              <option value="400">400</option>
+              <option value="1600">1600</option>
+            </select>
+          </label>
+          <label>
+            Seed
+            <input id="particle-seed-input" type="number" id="seed" name="seed" min="0" value="0" />
+          </label>
+          <label>
+            <button id="rerender-button">Rerender</button>
+          </label>
+        </div>
         <label>
-          <button id="rerender-button">Rerender</button>
-        </label>
-        <label>
-          Number of particles
-          <select id="particle-count-select">
-            <option value="25">25</option>
-            <option value="100">100</option>
-            <option value="400">400</option>
-            <option value="1600">1600</option>
+          Mode
+          <select id="mode-select">
+            <option value="build">Build Tree</option>
+            <option value="traverse">Traverse Tree</option>
           </select>
-        </label>
-        <label>
-          Seed
-          <input id="particle-seed-input" type="number" id="seed" name="seed" min="0" value="0" />
-        </label>
-        <label>
-          Opening angle theta
-          <input id="theta-slider" type="range" min="0.001" max="1.0" step="0.001" value="0.7" />
-          <span id="theta-value">0.7</span>
         </label>
         <label>
           Target particle index
           <input id="target-particle-input" type="number" min="0" max="24" value="0" />
         </label>
+        <div id="theta-control">
+          <label>
+            Opening angle theta
+            <input id="theta-slider" type="range" min="0.001" max="1.0" step="0.001" value="0.7" />
+            <span id="theta-value">0.7</span>
+          </label>
+        </div>
         <div class="stats">
           <h3>Stats</h3>
           <p id="stats-text">N = 25, seed = 0</p>
@@ -51,9 +62,12 @@
       </aside>
     </main>
 
-    <section class="discription-panel">
-      <h2>Build Tree Mode</h2>
-      <p>粒子を単位正方形内に配置。今後この上にセル境界を描画していく。</p>
+    <section class="description-panel">
+      <h2 id="mode-description-title">Build Tree Mode</h2>
+      <p id="mode-description-text">
+        粒子を含む正方形セルを再帰的に 4 分割します。 セル内の粒子数が 1
+        個以下になると、そのセルは葉として扱われます。
+      </p>
     </section>
 
     <script type="module" src="/src/main.ts"></script>
