@@ -1,7 +1,7 @@
 import "./style.css";
 import { createBuildRenderState, drawScene, generateParticles } from "./renderer";
 import { buildTreeWithSteps } from "./tree";
-import { traverseTree } from "./traversal";
+import { createTraversalResultFromDepthSteps, traverseTreeWithDepthSteps } from "./traversal";
 import { clamp } from "./utils";
 
 function getElementOrThrow<T extends Element>(selector: string): T {
@@ -33,6 +33,7 @@ const stepForwardButton = getElementOrThrow<HTMLButtonElement>("#step-forward-bu
 const resetButton = getElementOrThrow<HTMLButtonElement>("#reset-button");
 
 let currentBuildStepIndex = -1;
+let currentTraversalDepthStepIndex = -1;
 
 function render(): void {
   const mode = getVisualizationMode();
@@ -52,8 +53,19 @@ function render(): void {
   const theta = Number(thetaSlider.value);
   thetaValue.textContent = theta.toFixed(3);
 
+  const traversalDepthSteps =
+    mode === "traverse" ? traverseTreeWithDepthSteps(tree, targetParticleIndex, theta) : [];
+
+  currentTraversalDepthStepIndex = clamp(
+    currentTraversalDepthStepIndex,
+    -1,
+    traversalDepthSteps.length - 1,
+  );
+
   const traversalResult =
-    mode === "traverse" ? traverseTree(tree, targetParticleIndex, theta) : null;
+    mode === "traverse"
+      ? createTraversalResultFromDepthSteps(traversalDepthSteps, currentTraversalDepthStepIndex)
+      : null;
 
   drawScene(
     canvas,
@@ -75,6 +87,9 @@ function render(): void {
     maxDepth: Math.max(...tree.cells.map((cell) => cell.depth)),
     currentBuildStepIndex,
     buildStepCount: buildSteps.length,
+    currentTraversalDepthStepIndex,
+    traversalDepthStepCount: traversalDepthSteps.length,
+    currentTraversalDepthStep: traversalResult?.currentDepthStep ?? null,
     visitedCellCount: traversalResult?.visitedCellCount ?? null,
     acceptedCellCount: traversalResult?.acceptedCellCount ?? null,
     openedCellCount: traversalResult?.openedCellCount ?? null,
@@ -132,6 +147,21 @@ function updateStats(
     maxDepth: number;
     currentBuildStepIndex: number;
     buildStepCount: number;
+    currentTraversalDepthStepIndex: number;
+    traversalDepthStepCount: number;
+    currentTraversalDepthStep: {
+      stepId: number;
+      depth: number;
+      cellSteps: {
+        cellId: number;
+        depth: number;
+        action: string;
+        size: number;
+        distance: number;
+        ratio: number;
+        theta: number;
+      }[];
+    } | null;
     visitedCellCount: number | null;
     acceptedCellCount: number | null;
     openedCellCount: number | null;
@@ -154,21 +184,49 @@ function updateStats(
     return;
   }
 
+  const depthStep = stats.currentTraversalDepthStep;
+
+  const currentDepthText =
+    depthStep === null
+      ? ", current depth = none"
+      : `, depth step = ${stats.currentTraversalDepthStepIndex + 1}` +
+        ` / ${stats.traversalDepthStepCount}` +
+        `, current depth = ${depthStep.depth}` +
+        `, frontier cells = ${depthStep.cellSteps.length}` +
+        `, opened this depth = ${countAction(depthStep, "open")}` +
+        `, accepted this depth = ${countAction(depthStep, "accept")}` +
+        `, direct leaves this depth = ${countAction(depthStep, "direct-leaf")}` +
+        `, ignored this depth = ${countAction(depthStep, "ignore-self")}`;
+
   statsText.textContent =
     baseStats +
     `, visited = ${stats.visitedCellCount}, ` +
     `accepted = ${stats.acceptedCellCount}, ` +
     `opened = ${stats.openedCellCount}, ` +
-    `direct leaves = ${stats.directLeafCellCount}`;
+    `direct leaves = ${stats.directLeafCellCount}` +
+    currentDepthText;
+}
+
+function countAction(
+  depthStep: {
+    cellSteps: {
+      action: string;
+    }[];
+  },
+  action: string,
+): number {
+  return depthStep.cellSteps.filter((cellStep) => cellStep.action === action).length;
 }
 
 rerenderButton.addEventListener("click", () => {
   currentBuildStepIndex = -1;
+  currentTraversalDepthStepIndex = -1;
   render();
 });
 
 targetParticleInput.addEventListener("change", () => {
-  console.log("Rerender!");
+  currentBuildStepIndex = -1;
+  currentTraversalDepthStepIndex = -1;
   render();
 });
 
@@ -178,22 +236,44 @@ modeSelect.addEventListener("change", () => {
 });
 
 thetaSlider.addEventListener("input", () => {
-  console.log("Update theta slider!");
+  currentBuildStepIndex = -1;
+  currentTraversalDepthStepIndex = -1;
   render();
 });
 
 stepBackwardButton.addEventListener("click", () => {
-  currentBuildStepIndex -= 1;
+  const mode = getVisualizationMode();
+
+  if (mode === "build") {
+    currentBuildStepIndex -= 1;
+  } else {
+    currentTraversalDepthStepIndex -= 1;
+  }
+
   render();
 });
 
 stepForwardButton.addEventListener("click", () => {
-  currentBuildStepIndex += 1;
+  const mode = getVisualizationMode();
+
+  if (mode === "build") {
+    currentBuildStepIndex += 1;
+  } else {
+    currentTraversalDepthStepIndex += 1;
+  }
+
   render();
 });
 
 resetButton.addEventListener("click", () => {
-  currentBuildStepIndex = -1;
+  const mode = getVisualizationMode();
+
+  if (mode === "build") {
+    currentBuildStepIndex = -1;
+  } else {
+    currentTraversalDepthStepIndex = -1;
+  }
+
   render();
 });
 

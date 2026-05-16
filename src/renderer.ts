@@ -1,4 +1,5 @@
 import type { BuildStep, Cell, Rect } from "./tree";
+import type { TraversalResult } from "./traversal";
 import { clamp } from "./utils";
 
 export type Vec2 = {
@@ -148,8 +149,8 @@ function drawCell(
     context.fillRect(rect.x, rect.y, rect.width, rect.height);
   }
 
-  context.strokeStyle = getCellStrokeStyle(cell, buildRenderState);
-  context.lineWidth = getCellLineWidth(cell, buildRenderState);
+  context.strokeStyle = getCellStrokeStyle(cell, traversalResult, buildRenderState);
+  context.lineWidth = getCellLineWidth(cell, traversalResult, buildRenderState);
 
   context.strokeRect(rect.x, rect.y, rect.width, rect.height);
 }
@@ -269,9 +270,17 @@ function toCanvasPosition(position: Vec2, width: number, height: number): Vec2 {
   };
 }
 
-function getCellStrokeStyle(cell: Cell, buildRenderState: BuildRenderState | null): string {
+function getCellStrokeStyle(
+  cell: Cell,
+  traversalResult: TraversalResult | null,
+  buildRenderState: BuildRenderState | null,
+): string {
   if (buildRenderState?.currentCellId === cell.id) {
     return "#2563eb";
+  }
+
+  if (traversalResult?.currentCellIds.has(cell.id)) {
+    return "#dc2626";
   }
 
   if (cell.depth === 0) {
@@ -289,8 +298,16 @@ function getCellStrokeStyle(cell: Cell, buildRenderState: BuildRenderState | nul
   return "#d1d5db";
 }
 
-function getCellLineWidth(cell: Cell, buildRenderState: BuildRenderState | null): number {
+function getCellLineWidth(
+  cell: Cell,
+  traversalResult: TraversalResult | null,
+  buildRenderState: BuildRenderState | null,
+): number {
   if (buildRenderState?.currentCellId === cell.id) {
+    return 3;
+  }
+
+  if (traversalResult?.currentCellIds.has(cell.id)) {
     return 3;
   }
 
