@@ -31,9 +31,14 @@ const thetaValue = getElementOrThrow<HTMLSpanElement>("#theta-value");
 const stepBackwardButton = getElementOrThrow<HTMLButtonElement>("#step-backward-button");
 const stepForwardButton = getElementOrThrow<HTMLButtonElement>("#step-forward-button");
 const resetButton = getElementOrThrow<HTMLButtonElement>("#reset-button");
+const playPauseButton = getElementOrThrow<HTMLButtonElement>("#play-pause-button");
+const speedSlider = getElementOrThrow<HTMLInputElement>("#speed-slider");
+const speedValue = getElementOrThrow<HTMLSpanElement>("#speed-value");
 
 let currentBuildStepIndex = -1;
 let currentTraversalDepthStepIndex = -1;
+let isPlaying = false;
+let animationTimerId: number | null = null;
 
 function render(): void {
   const mode = getVisualizationMode();
@@ -52,6 +57,11 @@ function render(): void {
   thetaControl.hidden = mode !== "traverse";
   const theta = Number(thetaSlider.value);
   thetaValue.textContent = theta.toFixed(3);
+
+  const speed = Number(speedSlider.value);
+
+  speedValue.textContent = `${speed.toFixed(1)}x`;
+  playPauseButton.textContent = isPlaying ? "Pause" : "Play";
 
   const traversalDepthSteps =
     mode === "traverse" ? traverseTreeWithDepthSteps(tree, targetParticleIndex, theta) : [];
@@ -95,6 +105,117 @@ function render(): void {
     openedCellCount: traversalResult?.openedCellCount ?? null,
     directLeafCellCount: traversalResult?.directLeafCellCount ?? null,
   });
+}
+
+function startAnimation(): void {
+  if (isPlaying) {
+    return;
+  }
+
+  isPlaying = true;
+  render();
+  scheduleNextAnimationStep();
+}
+
+function pauseAnimation(): void {
+  isPlaying = false;
+
+  if (animationTimerId !== null) {
+    window.clearTimeout(animationTimerId);
+    animationTimerId = null;
+  }
+
+  render();
+}
+
+function toggleAnimation(): void {
+  if (isPlaying) {
+    pauseAnimation();
+    return;
+  }
+
+  startAnimation();
+}
+
+function scheduleNextAnimationStep(): void {
+  if (!isPlaying) {
+    return;
+  }
+
+  const intervalMs = getAnimationIntervalMs();
+
+  animationTimerId = window.setTimeout(() => {
+    const didAdvance = advanceCurrentModeStep();
+
+    if (!didAdvance) {
+      pauseAnimation();
+      return;
+    }
+
+    render();
+    scheduleNextAnimationStep();
+  }, intervalMs);
+}
+
+function getAnimationIntervalMs(): number {
+  const speed = Number(speedSlider.value);
+
+  if (!Number.isFinite(speed) || speed <= 0) {
+    return 1000;
+  }
+
+  return 1000 / speed;
+}
+
+function advanceCurrentModeStep(): boolean {
+  const mode = getVisualizationMode();
+
+  if (mode === "build") {
+    const buildStepCount = getCurrentBuildStepCount();
+
+    if (currentBuildStepIndex >= buildStepCount - 1) {
+      return false;
+    }
+
+    currentBuildStepIndex += 1;
+    return true;
+  }
+
+  const traversalDepthStepCount = getCurrentTraversalDepthStepCount();
+
+  if (currentTraversalDepthStepIndex >= traversalDepthStepCount - 1) {
+    return false;
+  }
+
+  currentTraversalDepthStepIndex += 1;
+  return true;
+}
+
+function getCurrentBuildStepCount(): number {
+  const particleCount = Number(particleCountSelect.value);
+  const seed = Number(particleSeed.value);
+  const particles = generateParticles(particleCount, seed);
+  const { buildSteps } = buildTreeWithSteps(particles);
+
+  return buildSteps.length;
+}
+
+function getCurrentTraversalDepthStepCount(): number {
+  const particleCount = Number(particleCountSelect.value);
+  const seed = Number(particleSeed.value);
+  const particles = generateParticles(particleCount, seed);
+  const { tree } = buildTreeWithSteps(particles);
+
+  const targetParticleIndex = getValidTargetParticleIndex(particleCount);
+  const theta = Number(thetaSlider.value);
+
+  const traversalDepthSteps = traverseTreeWithDepthSteps(
+      tree,
+      targetParticleIndex,
+      theta,
+  );
+
+  return traversalDepthSteps.length;
 }
 
 function getVisualizationMode(): VisualizationMode {
@@ -219,6 +340,8 @@ function countAction(
 }
 
 rerenderButton.addEventListener("click", () => {
+  pauseAnimation();
+
   currentBuildStepIndex = -1;
   currentTraversalDepthStepIndex = -1;
   render();
@@ -231,17 +354,31 @@ targetParticleInput.addEventListener("change", () => {
 });
 
 modeSelect.addEventListener("change", () => {
+  pauseAnimation();
+
   console.log("Rerender!");
   render();
 });
 
 thetaSlider.addEventListener("input", () => {
+  pauseAnimation();
+
   currentBuildStepIndex = -1;
   currentTraversalDepthStepIndex = -1;
   render();
 });
 
+speedSlider.addEventListener("input", () => {
+  render();
+});
+
+playPauseButton.addEventListener("click", () => {
+  toggleAnimation();
+});
+
 stepBackwardButton.addEventListener("click", () => {
+  pauseAnimation();
+
   const mode = getVisualizationMode();
 
   if (mode === "build") {
@@ -254,6 +391,8 @@ stepBackwardButton.addEventListener("click", () => {
 });
 
 stepForwardButton.addEventListener("click", () => {
+  pauseAnimation();
+
   const mode = getVisualizationMode();
 
   if (mode === "build") {
@@ -266,6 +405,8 @@ stepForwardButton.addEventListener("click", () => {
 });
 
 resetButton.addEventListener("click", () => {
+  pauseAnimation();
+
   const mode = getVisualizationMode();
 
   if (mode === "build") {

@@ -107,7 +107,8 @@ body {
   }
 }
 
-#theta-value {
+#theta-value,
+#speed-value {
   display: inline-block;
   margin-top: 4px;
   color: #52606d;
