@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>2D Tree Method Visualizer</title>
   </head>
+
   <body>
     <header class="app-header">
       <h1>2D Tree Method Visualizer</h1>
@@ -29,44 +30,56 @@
               <option value="1600">1600</option>
             </select>
           </label>
+
           <label>
             Seed
-            <input id="particle-seed-input" type="number" id="seed" name="seed" min="0" value="0" />
+            <input
+                id="particle-seed-input"
+                name="seed"
+                type="number"
+                min="0"
+                value="0"
+            />
           </label>
-          <label>
-            <button id="rerender-button">Rerender</button>
-          </label>
+
+          <button id="rerender-button" type="button">
+            Rerender
+          </button>
         </div>
+
         <div class="button-row">
           <button id="play-pause-button" type="button">
-              Play
+            Play
           </button>
+
           <button id="reset-button" type="button">
-              Reset
+            Reset
           </button>
         </div>
 
         <div class="button-row">
           <button id="step-backward-button" type="button">
-              Step Backward
+            Step Backward
           </button>
+
           <button id="step-forward-button" type="button">
-              Step Forward
+            Step Forward
           </button>
         </div>
 
         <label>
           Animation speed
           <input
-              id="speed-slider"
-              type="range"
-              min="0.5"
-              max="5.0"
-              step="0.5"
-              value="1.0"
+            id="speed-slider"
+            type="range"
+            min="0.5"
+            max="5.0"
+            step="0.5"
+            value="1.0"
           />
           <span id="speed-value">1.0x</span>
         </label>
+
         <label>
           Mode
           <select id="mode-select">
@@ -74,17 +87,33 @@
             <option value="traverse">Traverse Tree</option>
           </select>
         </label>
+
         <label>
           Target particle index
-          <input id="target-particle-input" type="number" min="0" max="24" value="0" />
+          <input
+            id="target-particle-input"
+            type="number"
+            min="0"
+            max="24"
+            value="0"
+          />
         </label>
+
         <div id="theta-control">
           <label>
             Opening angle theta
-            <input id="theta-slider" type="range" min="0.001" max="1.0" step="0.001" value="0.7" />
+            <input
+              id="theta-slider"
+              type="range"
+              min="0.001"
+              max="1.0"
+              step="0.001"
+              value="0.7"
+            />
             <span id="theta-value">0.7</span>
           </label>
         </div>
+
         <div class="stats">
           <h3>Stats</h3>
           <p id="stats-text">N = 25, seed = 0</p>
@@ -95,7 +124,7 @@
     <section class="description-panel">
       <h2 id="mode-description-title">Build Tree Mode</h2>
       <p id="mode-description-text">
-        粒子を含む正方形セルを再帰的に 4 分割します。 セル内の粒子数が 1
+        粒子を含む正方形セルを再帰的に 4 分割します。セル内の粒子数が 1
         個以下になると、そのセルは葉として扱われます。
       </p>
     </section>
